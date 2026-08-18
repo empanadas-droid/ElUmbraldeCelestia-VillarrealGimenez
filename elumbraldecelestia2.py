@@ -461,9 +461,13 @@ armario2_rect = pygame.Rect(800, 350, 100, 230)
 armario3_rect = pygame.Rect(1500, 350, 100, 230)    
 reja_rect = pygame.Rect(2100, 260, 160, 200) 
 puerta_1b_rect = pygame.Rect(1200, 290, 120, 210) 
-cajafusibles_rect = pygame.Rect(300, 350, 500, 230) 
-camilla_rect = pygame.Rect(1050, 480, 160, 100) 
+cajafusibles_rect = pygame.Rect(330, 280, 180, 240) 
+camilla_rect = pygame.Rect(1020, 430, 280, 160) 
 ANCHO_SALA_INTERIOR = 1600 
+
+# Zonas de interacción del Nivel 2 (Dormitorios)
+cerca_caja_fusibles = False
+cerca_camilla = False
 
 # REAJUSTADO: Rectángulo de la Caja Fuerte hecho notablemente más grande para que se aprecie mejor la animación
 caja_fuerte_interior_rect = pygame.Rect(1000, 250, 150, 250) 
@@ -732,14 +736,13 @@ while jugando:
                     # --- INTERACCIONES EN LOS DORMITORIOS (NIVEL 2) ---
                     elif cuarto_actual == "DORMITORIOS":
                         if evento.key == pygame.K_e:
-                            # 1. Cerca de la Caja de Fusibles (ajustado al rectángulo modificado: x=300, ancho=500)
-                            if 250 <= investigador.rect.x <= 800:
+                            if cerca_caja_fusibles and not puzzle_fusibles_resuelto:
                                 estado_actual = PUZZLE_FUSIBLES
                                 texto_codigo_fusibles = ""
-                            
-                            # 2. Cerca de la Camilla (En el centro, ajustado a posición visual)
-                            elif 350 <= investigador.rect.x <= 650:
+                                estado_visual_fusibles = "NORMAL"
+                            elif cerca_camilla and luz_uv_activa and not nota_camilla_recogida:
                                 item_inspeccionando = "Nota Camilla"
+                                if mostrar_ficha1: canal_efectos.play(mostrar_ficha1)
                                 estado_actual = VISTA_EXAMEN
 
         # -------------------------------------------------------------
@@ -854,17 +857,11 @@ while jugando:
             cerca_de_la_caja_interior = caja_fuerte_interior_rect.x - 60 < investigador.rect.x < caja_fuerte_interior_rect.x + caja_fuerte_interior_rect.width
             cerca_del_archivador_interior = archivador_interior_rect.x - 60 < investigador.rect.x < archivador_interior_rect.x + archivador_interior_rect.width
 
-        # -------------------------------------------------------------
-         # CONTROL DE LA TRANSICIÓN HACIA EL NIVEL 2
-        # -------------------------------------------------------------
-        elif estado_actual == "TRANSICION_ZOOM":
-            tiempo_actual = pygame.time.get_ticks()
-                        
-            # Espera 1.5 segundos (1500 ms) haciendo el zoom/espera antes de cambiar
-            if tiempo_actual - tiempo_inicio_zoom > 1500:
-                cuarto_actual = "DORMITORIOS"  # Cambia la sala al Nivel 2
-                investigador.rect.x = 100       # Reubica al jugador a la izquierda
-                estado_actual = JUEGO           # Vuelve al estado normal de juego
+        elif cuarto_actual == "DORMITORIOS":
+            camara_x = 0
+            # El jugador debe estar justo en frente del objeto para poder interactuar
+            cerca_caja_fusibles = cajafusibles_rect.left - 40 < investigador.rect.centerx < cajafusibles_rect.right + 40
+            cerca_camilla = camilla_rect.left - 40 < investigador.rect.centerx < camilla_rect.right + 40
 
 # ==========================================
     # --- RENDERIZADO GENERAL ---
@@ -1058,14 +1055,10 @@ while jugando:
             investigador.dibujar(lienzo_juego)
 
             # Indicadores de interacción en el nivel 2
-            cerca_caja_fusibles = 30 <= investigador.rect.x <= 250
-            cerca_camilla = 350 <= investigador.rect.x <= 650
-            
-            if cerca_caja_fusibles and not luz_uv_activa:
+            if cerca_caja_fusibles and not puzzle_fusibles_resuelto:
                 pygame.draw.rect(lienzo_juego, VIOLETA_UI, (550, 50, 500, 60), border_radius=8)
                 lienzo_juego.blit(fuente_subtitulos.render("Presiona [E] para usar Caja de Fusibles", True, BLANCO_TEXTO), (560, 65))
-            
-            if cerca_camilla and not nota_camilla_recogida:
+            elif cerca_camilla and luz_uv_activa and not nota_camilla_recogida:
                 pygame.draw.rect(lienzo_juego, VIOLETA_UI, (550, 50, 500, 60), border_radius=8)
                 lienzo_juego.blit(fuente_subtitulos.render("Presiona [E] para examinar Camilla", True, BLANCO_TEXTO), (570, 65))
 
@@ -1152,17 +1145,17 @@ while jugando:
             s_fondo.set_alpha(215)
             lienzo_juego.blit(s_fondo, (0, 0))
 
-            # Mostrar imagen progresiva según el estado
+            # Mostrar imagen progresiva según el avance del jugador
             if usar_fusibles_animados and len(imagenes_fusibles) >= 5:
                 indice_imagen = 0
                 if estado_visual_fusibles == "NORMAL":
-                    # Variar entre imagen 1 y 2 mientras escribe
-                    indice_imagen = 1 if len(texto_codigo_fusibles) > 0 else 0
+                    # Imágenes 1 a 3 según la cantidad de dígitos ingresados
+                    indice_imagen = min(len(texto_codigo_fusibles), 2)
                 elif estado_visual_fusibles == "ERROR":
-                    # Mostrar imagen 3 o 4 para error
-                    indice_imagen = 3 if (pygame.time.get_ticks() // 200) % 2 == 0 else 4
+                    # Parpadeo entre la imagen de error y la inicial
+                    indice_imagen = 3 if (pygame.time.get_ticks() // 200) % 2 == 0 else 0
                 elif estado_visual_fusibles == "CORRECTO":
-                    # Mostrar imagen 5 para correcto
+                    # Imagen 5: sistema activado
                     indice_imagen = 4
                 
                 imagen_fusible = imagenes_fusibles[indice_imagen]
