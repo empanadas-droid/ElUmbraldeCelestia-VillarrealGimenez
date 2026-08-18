@@ -548,52 +548,43 @@ def dibujar_inventario_roblox(superficie):
             else:
                 superficie.blit(fuente_pixel.render("NOTA", True, ORO_CAJA), (slot_nota_rect.x + 15, slot_nota_rect.y + 30))
 
-def obtener_objetivo_actual():
-    # Objetivos del Nivel 2 (Dormitorios)
+def obtener_lista_objetivos():
+    """Devuelve el título del nivel y su lista de tareas como (texto, completada)."""
     if cuarto_actual == "DORMITORIOS":
-        if not luz_uv_activa:
-            return "Objetivo: Resuelve el puzzle de la caja de fusibles para activar la luz UV."
-        elif not nota_camilla_recogida:
-            return "Objetivo: Busca la nota en la camilla."
-        else:
-            return "Objetivo: Explora los dormitorios y busca más pistas."
-    
-    # Objetivos del Nivel 1 (Pasillo y Sala de Registros)
-    # 1. Si no ha abierto la reja pero ya tiene el código o la ficha
-    if not reja_abierta:
-        if not caja_fuerte_abierta:
-            if not codigo_recogido:
-                return "Objetivo: Explora la Sala de Registros y busca el código."
-            else:
-                return "Objetivo: Abre la caja fuerte en la Sala de Registros."
-        else:
-            if not ficha_recogida:
-                return "Objetivo: Inspecciona la caja fuerte para recoger la Ficha."
-            else:
-                return "Objetivo: Usa el código en el teclado de la Reja Principal."
-    else:
-        return "Objetivo: ¡Escapa de la Recepcionista por el pasillo!"
+        return "NIVEL 2 - DORMITORIOS", [
+            ("Examina la camilla y toma la nota", nota_camilla_recogida),
+            ("Resuelve la caja de fusibles (UV)", puzzle_fusibles_resuelto),
+        ]
+    return "NIVEL 1 - HOSPITAL", [
+        ("Encuentra el código (Sala 1B)", codigo_recogido),
+        ("Toma la Ficha de la caja fuerte", ficha_recogida),
+        ("Abre la reja con el teclado", reja_abierta),
+    ]
 
-def dibujar_barra_objetivos(superficie):
-    texto_obj = obtener_objetivo_actual()
-    
-    # Renderizamos el texto
-    surf_texto = fuente_documento.render(texto_obj, True, (240, 240, 240))
-    
-    ancho_caja = surf_texto.get_width() + 30
-    alto_caja = 40
-    x, y = 20, 20  # Posición superior izquierda
-    
-    # Fondo semi-transparente estilo UI
+def dibujar_lista_objetivos(superficie):
+    """Dibuja el panel de tareas/objetivos del nivel en la esquina superior izquierda."""
+    titulo, objetivos = obtener_lista_objetivos()
+    x, y = 20, 20
+    alto_linea = 28
+
+    surf_titulo = fuente_documento.render(titulo, True, ORO_CAJA)
+    surfs_lineas = []
+    for texto, completada in objetivos:
+        marca = "[X]" if completada else "[ ]"
+        color = VERDE_OK if completada else (240, 240, 240)
+        surfs_lineas.append(fuente_documento.render(f"{marca} {texto}", True, color))
+
+    ancho_caja = max([surf_titulo.get_width()] + [s.get_width() for s in surfs_lineas]) + 30
+    alto_caja = 45 + alto_linea * len(surfs_lineas)
+
     caja_ui = pygame.Surface((ancho_caja, alto_caja), pygame.SRCALPHA)
-    caja_ui.fill((15, 15, 25, 200)) # Fondo oscuro transparente
-    
-    # Borde violeta/gris
+    caja_ui.fill((15, 15, 25, 200))
     pygame.draw.rect(caja_ui, (80, 60, 110), caja_ui.get_rect(), 2, border_radius=6)
-    
-    # Dibujamos en la pantalla
     superficie.blit(caja_ui, (x, y))
-    superficie.blit(surf_texto, (x + 15, y + 8))
+
+    superficie.blit(surf_titulo, (x + 15, y + 10))
+    for i, surf_linea in enumerate(surfs_lineas):
+        superficie.blit(surf_linea, (x + 15, y + 40 + i * alto_linea))
 
 
 # ==========================================
@@ -736,14 +727,15 @@ while jugando:
                     # --- INTERACCIONES EN LOS DORMITORIOS (NIVEL 2) ---
                     elif cuarto_actual == "DORMITORIOS":
                         if evento.key == pygame.K_e:
-                            if cerca_caja_fusibles and not puzzle_fusibles_resuelto:
-                                estado_actual = PUZZLE_FUSIBLES
-                                texto_codigo_fusibles = ""
-                                estado_visual_fusibles = "NORMAL"
-                            elif cerca_camilla and luz_uv_activa and not nota_camilla_recogida:
+                            # Primero la camilla; la caja de fusibles se habilita después de tomar la nota
+                            if cerca_camilla and not nota_camilla_recogida:
                                 item_inspeccionando = "Nota Camilla"
                                 if mostrar_ficha1: canal_efectos.play(mostrar_ficha1)
                                 estado_actual = VISTA_EXAMEN
+                            elif cerca_caja_fusibles and nota_camilla_recogida and not puzzle_fusibles_resuelto:
+                                estado_actual = PUZZLE_FUSIBLES
+                                texto_codigo_fusibles = ""
+                                estado_visual_fusibles = "NORMAL"
 
         # -------------------------------------------------------------
         # EVENTOS DE RATÓN (MOUSEBUTTONDOWN)
@@ -1054,14 +1046,6 @@ while jugando:
 
             investigador.dibujar(lienzo_juego)
 
-            # Indicadores de interacción en el nivel 2
-            if cerca_caja_fusibles and not puzzle_fusibles_resuelto:
-                pygame.draw.rect(lienzo_juego, VIOLETA_UI, (550, 50, 500, 60), border_radius=8)
-                lienzo_juego.blit(fuente_subtitulos.render("Presiona [E] para usar Caja de Fusibles", True, BLANCO_TEXTO), (560, 65))
-            elif cerca_camilla and luz_uv_activa and not nota_camilla_recogida:
-                pygame.draw.rect(lienzo_juego, VIOLETA_UI, (550, 50, 500, 60), border_radius=8)
-                lienzo_juego.blit(fuente_subtitulos.render("Presiona [E] para examinar Camilla", True, BLANCO_TEXTO), (570, 65))
-
             if not luz_uv_activa:
                 centro = (investigador.rect.centerx, investigador.rect.centery)
                 dibujar_circulo_vision(lienzo_juego, centro, radio=160)
@@ -1077,12 +1061,27 @@ while jugando:
                     capa_uv.fill((110, 25, 180, 75))
                     lienzo_juego.blit(capa_uv, (0, 0))
 
+            # Indicadores de interacción (sobre la oscuridad para que siempre se lean)
+            if cerca_camilla and not nota_camilla_recogida:
+                pygame.draw.rect(lienzo_juego, VIOLETA_UI, (550, 50, 500, 60), border_radius=8)
+                lienzo_juego.blit(fuente_subtitulos.render("Presiona [E] para examinar Camilla", True, BLANCO_TEXTO), (570, 65))
+            elif cerca_caja_fusibles and not puzzle_fusibles_resuelto:
+                pygame.draw.rect(lienzo_juego, VIOLETA_UI, (550, 50, 500, 60), border_radius=8)
+                if nota_camilla_recogida:
+                    lienzo_juego.blit(fuente_subtitulos.render("Presiona [E] para usar Caja de Fusibles", True, BLANCO_TEXTO), (560, 65))
+                else:
+                    lienzo_juego.blit(fuente_subtitulos.render("Primero examina la camilla...", True, BLANCO_TEXTO), (620, 65))
+
         # 2. Overlays y popups
         if mostrar_ficha and usar_ficha_real:
             lienzo_juego.blit(imagen_ficha, (400, 110))
 
         aplicar_parpadeo_luces(lienzo_juego)
         dibujar_inventario_roblox(lienzo_juego)
+
+        # Panel de tareas/objetivos del nivel (solo durante el juego normal)
+        if estado_actual == JUEGO and not mostrar_ficha:
+            dibujar_lista_objetivos(lienzo_juego)
 
         if estado_actual == PAD_REJA:
             s_oscura = pygame.Surface((ANCHO, ALTO)); s_oscura.fill((0,0,0)); s_oscura.set_alpha(200); lienzo_juego.blit(s_oscura, (0,0))
