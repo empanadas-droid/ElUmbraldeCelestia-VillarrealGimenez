@@ -381,6 +381,8 @@ for i in range(1, 6):  # Carga cajafusibles_1.png, cajafusibles_2.png, ..., caja
     else:
         usar_fusibles_animados = False
 imagen_nota_camilla, usar_nota_camilla = cargar_img("C:\\Users\\sofia\\Downloads\\videojuego\\escenarios\\nota_camilla.png", (500, 650), True)
+# Primer plano de la camilla (fondo de pantalla completa al examinarla)
+imagen_primerplano_camilla, usar_primerplano_camilla = cargar_img("C:\\Users\\sofia\\Downloads\\videojuego\\escenarios\\primerplano_camilla.png", (ANCHO, ALTO))
 # Crear versión pequeña para el inventario
 mini_nota_camilla = pygame.transform.scale(imagen_nota_camilla, (80, 80)) if usar_nota_camilla else None
 # Crear versión grande para vista de examen
@@ -461,8 +463,8 @@ armario2_rect = pygame.Rect(800, 350, 100, 230)
 armario3_rect = pygame.Rect(1500, 350, 100, 230)    
 reja_rect = pygame.Rect(2100, 260, 160, 200) 
 puerta_1b_rect = pygame.Rect(1200, 290, 120, 210) 
-cajafusibles_rect = pygame.Rect(330, 280, 180, 240) 
-camilla_rect = pygame.Rect(1020, 430, 280, 160) 
+cajafusibles_rect = pygame.Rect(290, 280, 180, 240) 
+camilla_rect = pygame.Rect(700, 430, 280, 160) 
 ANCHO_SALA_INTERIOR = 1600 
 
 # Zonas de interacción del Nivel 2 (Dormitorios)
@@ -1127,6 +1129,9 @@ while jugando:
                 rect_img = grande_ficha_celestia.get_rect(center=(ANCHO // 2, ALTO // 2))
                 lienzo_juego.blit(grande_ficha_celestia, rect_img)
             elif item_inspeccionando == "Nota Camilla" and grande_nota_camilla:
+                # Primer plano de la camilla de fondo, con la nota de símbolos por encima
+                if usar_primerplano_camilla:
+                    lienzo_juego.blit(imagen_primerplano_camilla, (0, 0))
                 rect_img = grande_nota_camilla.get_rect(center=(ANCHO // 2, ALTO // 2))
                 lienzo_juego.blit(grande_nota_camilla, rect_img)
                 
