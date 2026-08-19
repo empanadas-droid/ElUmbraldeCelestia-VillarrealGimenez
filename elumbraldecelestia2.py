@@ -371,15 +371,28 @@ imagen_interior_archivador, usar_interior_archivador = cargar_img("C:\\Users\\so
 # --- NUEVAS IMÁGENES PARA EL NIVEL 2 ---
 # --- LISTA DE IMÁGENES PROGRESIVAS PARA LA CAJA DE FUSIBLES ---
 imagenes_fusibles = []
-usar_fusibles_animados = True
 
-for i in range(1, 6):  # Carga cajafusibles_1.png, cajafusibles_2.png, ..., cajafusibles_5.png
-    ruta_img = f"C:\\Users\\sofia\\Downloads\\videojuego\\escenarios\\cajafusibles_{i}.png"
-    img, exito = cargar_img(ruta_img, (600, 450), True)
-    if exito:
-        imagenes_fusibles.append(img)
-    else:
-        usar_fusibles_animados = False
+# Se prueban varios nombres posibles para cada imagen (1 a 5) y se usa el primero que exista
+for i in range(1, 6):
+    nombres_posibles = [
+        f"cajafusibles_{i}.png",
+        f"cajafusibles{i}.png",
+        f"caja_fusibles_{i}.png",
+        f"caja_fusibles{i}.png",
+        f"fusibles_{i}.png",
+        f"fusibles{i}.png",
+        f"fusible_{i}.png",
+        f"caja_de_fusibles_{i}.png",
+    ]
+    for nombre in nombres_posibles:
+        ruta_img = f"C:\\Users\\sofia\\Downloads\\videojuego\\escenarios\\{nombre}"
+        img, exito = cargar_img(ruta_img, (600, 450), True)
+        if exito:
+            imagenes_fusibles.append(img)
+            break
+
+# Basta con que exista al menos una imagen para mostrar la caja de fusibles
+usar_fusibles_animados = len(imagenes_fusibles) > 0
 imagen_nota_camilla, usar_nota_camilla = cargar_img("C:\\Users\\sofia\\Downloads\\videojuego\\escenarios\\nota_camilla.png", (500, 650), True)
 # Primer plano de la camilla (fondo de pantalla completa al examinarla)
 imagen_primerplano_camilla, usar_primerplano_camilla = cargar_img("C:\\Users\\sofia\\Downloads\\videojuego\\escenarios\\primerplano_camilla.png", (ANCHO, ALTO))
@@ -731,7 +744,7 @@ while jugando:
                         if evento.key == pygame.K_e:
                             # Primero la camilla; la caja de fusibles se habilita después de tomar la nota
                             if cerca_camilla and not nota_camilla_recogida:
-                                item_inspeccionando = "Nota Camilla"
+                                item_inspeccionando = "Camilla"
                                 if mostrar_ficha1: canal_efectos.play(mostrar_ficha1)
                                 estado_actual = VISTA_EXAMEN
                             elif cerca_caja_fusibles and nota_camilla_recogida and not puzzle_fusibles_resuelto:
@@ -782,7 +795,11 @@ while jugando:
                     estado_actual = JUEGO
 
             elif estado_actual == VISTA_EXAMEN:
-                if item_inspeccionando == "Nota Camilla" and not nota_camilla_recogida:
+                if item_inspeccionando == "Camilla":
+                    # Del primer plano de la camilla se pasa a ver solo la nota
+                    item_inspeccionando = "Nota Camilla"
+                    if mostrar_ficha1: canal_efectos.play(mostrar_ficha1)
+                elif item_inspeccionando == "Nota Camilla" and not nota_camilla_recogida:
                     # Recoger la nota al hacer clic
                     inventario.append("Nota Camilla")
                     nota_camilla_recogida = True
@@ -1128,10 +1145,13 @@ while jugando:
             elif item_inspeccionando == "Ficha Celestia" and grande_ficha_celestia:
                 rect_img = grande_ficha_celestia.get_rect(center=(ANCHO // 2, ALTO // 2))
                 lienzo_juego.blit(grande_ficha_celestia, rect_img)
-            elif item_inspeccionando == "Nota Camilla" and grande_nota_camilla:
-                # Primer plano de la camilla de fondo, con la nota de símbolos por encima
+            elif item_inspeccionando == "Camilla":
+                # Primer plano de la camilla; al hacer clic se pasa a ver la nota
                 if usar_primerplano_camilla:
                     lienzo_juego.blit(imagen_primerplano_camilla, (0, 0))
+                info_nota = fuente_subtitulos.render("Haz clic para examinar la nota", True, VERDE_OK)
+                lienzo_juego.blit(info_nota, (ANCHO // 2 - info_nota.get_width() // 2, ALTO - 80))
+            elif item_inspeccionando == "Nota Camilla" and grande_nota_camilla:
                 rect_img = grande_nota_camilla.get_rect(center=(ANCHO // 2, ALTO // 2))
                 lienzo_juego.blit(grande_nota_camilla, rect_img)
                 
@@ -1150,7 +1170,7 @@ while jugando:
             lienzo_juego.blit(s_fondo, (0, 0))
 
             # Mostrar imagen progresiva según el avance del jugador
-            if usar_fusibles_animados and len(imagenes_fusibles) >= 5:
+            if usar_fusibles_animados:
                 indice_imagen = 0
                 if estado_visual_fusibles == "NORMAL":
                     # Imágenes 1 a 3 según la cantidad de dígitos ingresados
@@ -1162,6 +1182,8 @@ while jugando:
                     # Imagen 5: sistema activado
                     indice_imagen = 4
                 
+                # Si faltan imágenes, se usa la última disponible
+                indice_imagen = min(indice_imagen, len(imagenes_fusibles) - 1)
                 imagen_fusible = imagenes_fusibles[indice_imagen]
                 rect_imagen = imagen_fusible.get_rect(center=(ANCHO // 2, ALTO // 2 - 50))
                 lienzo_juego.blit(imagen_fusible, rect_imagen)
